@@ -41,7 +41,6 @@ int main()
 
     return 0;
 }
-
 void INITDB() {
     FILE* iptr = fopen("students_with_class.txt", "r");
     if (iptr == NULL) {
@@ -53,17 +52,27 @@ void INITDB() {
     char lname[MAX_NAME_LEN];
     char phone[MAX_PHONE_LEN];
     int level, class_num, grades[NUM_COURSES];
+    struct Student* newStudent;
+
+    // Initialize the database with NULL pointers
+    for (int i = 0; i < NUM_LEVELS; i++)
+        for (int j = 0; j < NUM_CLASSES; j++)
+            s.DB[i][j] = NULL;
 
     while (fscanf(iptr, "%s %s %s %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
         fname, lname, phone, &level, &class_num,
         &grades[0], &grades[1], &grades[2], &grades[3], &grades[4],
         &grades[5], &grades[6], &grades[7], &grades[8], &grades[9]) == 17) {
-        struct Student* newStudent = createStudent(fname, lname, phone, level, class_num, grades);
+        newStudent = createStudent(fname, lname, phone, level, class_num, grades);
+
+        // Link the new student to the existing list of students
+        newStudent->nextStud = s.DB[level][class_num];
         s.DB[level][class_num] = newStudent;
     }
 
     fclose(iptr);
 }
+
 
 struct Student* createStudent(char* fname, char* lname, char* phone, int level, int class_num, int* grades) {
     struct Student* newStudent = (struct Student*)malloc(sizeof(struct Student));
@@ -125,7 +134,7 @@ void insertStudent() {
 
     do {
         printf("Enter the student's details or type 'e' to exit.\n");
-        printf("Format: Firstname Lastname Phone Level Class_number Grades\n");
+        printf("Format: Firstname Lastname Phone Level: 1-12 Class_number: 1-10 10-Grades\n");
         printf("Example: Dinorah Wonderly 0560344096 9 9 97 64 82 89 99 92 75 84 72 63\n");
 
         fgets(userInput, sizeof(userInput), stdin);
@@ -153,8 +162,11 @@ void insertStudent() {
             }
 
             // Create the new student
-            struct Student* newStudent = createStudent(fname, lname, phone, level, class_num, grades);
-            
+            struct Student* newStudent = createStudent(fname, lname, phone, level-1, class_num-1, grades);
+
+            // Add the student to the start of the corresponding linked list in the school database
+            newStudent->nextStud = s.DB[level - 1][class_num - 1];
+            s.DB[level - 1][class_num - 1] = newStudent;
 
             printf("Student details entered successfully.\n");
             return;
