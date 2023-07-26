@@ -154,7 +154,7 @@ void insertStudent() {
 
             // Create the new student
             struct Student* newStudent = createStudent(fname, lname, phone, level, class_num, grades);
-            // addStudentToDB(newStudent);  // This function should be implemented according to your database setup
+            
 
             printf("Student details entered successfully.\n");
             return;
