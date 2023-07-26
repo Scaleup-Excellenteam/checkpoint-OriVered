@@ -26,6 +26,7 @@ struct School {
 static struct School s;
 
 void INITDB();
+void PRINTDB();
 struct Student* createStudent(char* fname, char* lname, char* phone, int level, int class_num, int* grades);
 void menu();
 void insertStudent();
@@ -36,6 +37,7 @@ void topFailed();
 int main()
 {
     INITDB();
+    PRINTDB();
 
     menu();
 
@@ -54,23 +56,38 @@ void INITDB() {
     int level, class_num, grades[NUM_COURSES];
     struct Student* newStudent;
 
-    // Initialize the database with NULL pointers
-    for (int i = 0; i < NUM_LEVELS; i++)
-        for (int j = 0; j < NUM_CLASSES; j++)
-            s.DB[i][j] = NULL;
-
     while (fscanf(iptr, "%s %s %s %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
         fname, lname, phone, &level, &class_num,
         &grades[0], &grades[1], &grades[2], &grades[3], &grades[4],
-        &grades[5], &grades[6], &grades[7], &grades[8], &grades[9]) == 17) {
+        &grades[5], &grades[6], &grades[7], &grades[8], &grades[9]) == 15) {
         newStudent = createStudent(fname, lname, phone, level, class_num, grades);
 
         // Link the new student to the existing list of students
-        newStudent->nextStud = s.DB[level][class_num];
-        s.DB[level][class_num] = newStudent;
+        newStudent->nextStud = s.DB[level-1][class_num-1];
+        s.DB[level-1][class_num-1] = newStudent;
+
     }
 
     fclose(iptr);
+}
+
+void PRINTDB() {
+    int i, j, k;
+
+    for (i = 0; i < NUM_LEVELS; i++) {
+        for (j = 0; j < NUM_CLASSES; j++) {
+            struct Student* student = s.DB[i][j];
+            while (student != NULL) {
+                printf("%s %s %s %d %d ", student->fname, student->lname, student->phone, student->level + 1, student->class_num + 1);
+                for (k = 0; k < NUM_COURSES; k++) {
+                    printf("%d ", student->grades[k]);
+                }
+                printf("\n");
+
+                student = student->nextStud;
+            }
+        }
+    }
 }
 
 
@@ -178,7 +195,50 @@ void insertStudent() {
 }
 
 void average() {
+    char avgInput[100];
+    int level_num;
+    int course_num;
 
+    do {
+        printf("Enter the level num and the course num or type 'e' to exit.\n");
+        printf("Format: Level: 1-12 Course: 1-10\n");
+        printf("Example: 9 9\n");
+
+        fgets(avgInput, sizeof(avgInput), stdin);
+
+        // Exit the function if the user enters 'e'
+        if (avgInput[0] == 'e') {
+            return;
+        }
+
+        int num = sscanf(avgInput, "%d %d", &level_num, &course_num);
+        if (num == 2) {
+            int level_avg = 0; // Initialize level_avg
+            int student_counter = 0; // Initialize student_counter
+
+            for (int i = 0; i < NUM_CLASSES; i++) {
+                struct Student* student = s.DB[level_num - 1][i];
+                while (student != NULL) {
+                    level_avg += student->grades[course_num - 1]; // add grade to level_avg
+                    student_counter++; // add to level student counter
+                    student = student->nextStud;
+                }
+            }
+
+            // Check if there are any students in this level and course
+            if (student_counter > 0) {
+                printf("Average for Level %d, Course %d: %.2f\n", level_num, course_num, (float)level_avg / student_counter);
+            }
+            else {
+                printf("No students in Level %d, Course %d\n", level_num, course_num);
+            }
+
+            return;
+        }
+        else {
+            printf("Incorrect input. Please try again.\n");
+        }
+    } while (1);
 }
 
 void topOutstanding() {
