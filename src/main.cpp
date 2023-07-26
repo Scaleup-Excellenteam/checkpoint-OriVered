@@ -4,6 +4,7 @@
 
 #define NUM_LEVELS 12
 #define NUM_CLASSES 10
+#define NUM_TOP 10
 #define NUM_COURSES 10
 #define MAX_NAME_LEN 50
 #define MAX_PHONE_LEN 15
@@ -19,8 +20,13 @@ struct Student {
     struct Student* nextStud;
 };
 
+struct Tops {
+    struct Student* top[NUM_TOP];
+};
+
 struct School {
     struct Student* DB[NUM_LEVELS][NUM_CLASSES];
+    struct Tops course[NUM_LEVELS][NUM_COURSES];
 };
 
 static struct School s;
@@ -33,11 +39,11 @@ void insertStudent();
 void average();
 void topOutstanding();
 void topFailed();
+void addTopStud(struct Student*);
 
 int main()
 {
     INITDB();
-    PRINTDB();
 
     menu();
 
@@ -61,6 +67,9 @@ void INITDB() {
         &grades[0], &grades[1], &grades[2], &grades[3], &grades[4],
         &grades[5], &grades[6], &grades[7], &grades[8], &grades[9]) == 15) {
         newStudent = createStudent(fname, lname, phone, level, class_num, grades);
+
+        addTopStud(newStudent);
+
 
         // Link the new student to the existing list of students
         newStudent->nextStud = s.DB[level-1][class_num-1];
@@ -90,6 +99,26 @@ void PRINTDB() {
     }
 }
 
+void addTopStud(struct Student* student)
+{
+    int class_num = student->class_num;
+    int level = student->level;
+    int crs,plc;
+
+    for (crs = 0; crs < NUM_COURSES; crs++)
+        for (plc = 0; plc < NUM_TOP; plc++) {
+
+            if (s.course[level][crs].top[plc] == NULL){
+                s.course[level][crs].top[plc] = student;
+                break;
+            }
+            else if (student->grades[plc] > s.course[level][crs].top[plc]->grades[plc])
+            {
+                s.course[level][crs].top[plc] = student;
+                break;
+            }
+        }
+}
 
 struct Student* createStudent(char* fname, char* lname, char* phone, int level, int class_num, int* grades) {
     struct Student* newStudent = (struct Student*)malloc(sizeof(struct Student));
@@ -139,6 +168,7 @@ void menu() {
         default:
             printf("Unrecognized command. Please try again.\n");
         }
+        printf("\n");
     } while (userChoice != 'e');
 }
 
@@ -242,8 +272,45 @@ void average() {
 }
 
 void topOutstanding() {
+    int level, course;
 
+    do {
+        printf("Enter the level and course number or 'e' to exit:\n");
+        printf("Format: Level: 1-12 Course: 1-10\n");
+        printf("Example: 9 9\n");
+        char input[100];
+        fgets(input, sizeof(input), stdin);
+
+        // Exit the function if the user enters 'e'
+        if (input[0] == 'e') {
+            return;
+        }
+
+        int num = sscanf(input, "%d %d", &level, &course);
+
+        // Validate input
+        if (num != 2 || level < 1 || level > NUM_LEVELS || course < 1 || course > NUM_COURSES) {
+            printf("Invalid level or course number. Please try again.\n");
+        }
+        else {
+            break;
+        }
+    } while (1);
+
+    struct Tops* t = &s.course[--level][--course];
+
+    printf("Top students for Level %d, Course %d:\n", level + 1, course + 1);
+    for (int i = 0; i < NUM_TOP; i++) {
+        struct Student* topStudent = t->top[i];
+        if (topStudent == NULL) {
+            printf("No student in position %d\n", i + 1);
+        }
+        else {
+            printf(" %d) %s %s - %d \n", i + 1, topStudent->fname, topStudent->lname, topStudent->grades[--course]);
+        }
+    }
 }
+
 
 void topFailed() {
 
