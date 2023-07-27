@@ -101,20 +101,19 @@ void PRINTDB() {
 
 void addTopStud(struct Student* student)
 {
-    int class_num = student->class_num;
     int level = student->level;
     int crs,plc;
 
     for (crs = 0; crs < NUM_COURSES; crs++)
         for (plc = 0; plc < NUM_TOP; plc++) {
 
-            if (s.course[level][crs].top[plc] == NULL){
-                s.course[level][crs].top[plc] = student;
+            if (s.course[level-1][crs].top[plc] == NULL){
+                s.course[level-1][crs].top[plc] = student;
                 break;
             }
-            else if (student->grades[plc] > s.course[level][crs].top[plc]->grades[plc])
+            else if (student->grades[plc] > s.course[level-1][crs].top[plc]->grades[crs])
             {
-                s.course[level][crs].top[plc] = student;
+                s.course[level-1][crs].top[crs] = student;
                 break;
             }
         }
@@ -308,7 +307,7 @@ void topOutstanding() {
             printf("No student in position %d\n", i + 1);
         }
         else {
-            printf(" %d) %s %s - %d \n", i + 1, topStudent->fname, topStudent->lname, topStudent->grades[course]);
+            printf(" %d) %s %s - %d \n", i + 1, topStudent->fname, topStudent->lname, topStudent->grades[course-1]);
         }
     }
 }
