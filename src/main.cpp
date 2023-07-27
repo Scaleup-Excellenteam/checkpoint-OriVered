@@ -211,6 +211,8 @@ void insertStudent() {
             // Create the new student
             struct Student* newStudent = createStudent(fname, lname, phone, level-1, class_num-1, grades);
 
+            addTopStud(newStudent);
+
             // Add the student to the start of the corresponding linked list in the school database
             newStudent->nextStud = s.DB[level - 1][class_num - 1];
             s.DB[level - 1][class_num - 1] = newStudent;
@@ -297,16 +299,16 @@ void topOutstanding() {
         }
     } while (1);
 
-    struct Tops* t = &s.course[--level][--course];
+    struct Tops* t = &s.course[level-1][course-1];
 
-    printf("Top students for Level %d, Course %d:\n", level + 1, course + 1);
+    printf("Top students for Level %d, Course %d:\n", level, course);
     for (int i = 0; i < NUM_TOP; i++) {
         struct Student* topStudent = t->top[i];
         if (topStudent == NULL) {
             printf("No student in position %d\n", i + 1);
         }
         else {
-            printf(" %d) %s %s - %d \n", i + 1, topStudent->fname, topStudent->lname, topStudent->grades[--course]);
+            printf(" %d) %s %s - %d \n", i + 1, topStudent->fname, topStudent->lname, topStudent->grades[course]);
         }
     }
 }
