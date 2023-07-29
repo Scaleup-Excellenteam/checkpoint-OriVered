@@ -180,10 +180,9 @@ void insertStudent() {
             &grades[0], &grades[1], &grades[2], &grades[3], &grades[4],
             &grades[5], &grades[6], &grades[7], &grades[8], &grades[9]);
 
-        int i;
-        if (num == 14) {
+        if (num == 15) {
             // Create the new student
-            newStudent = createStudent(fname, lname, phone, level, class_num, grades);
+            newStudent = createStudent(fname, lname, phone, level-1, class_num-1, grades);
 
             addStudToDB(newStudent);
             addTopStud(newStudent->data);
@@ -372,6 +371,7 @@ void menu() {
         printf("q - Exit\n");
 
         scanf(" %c", &userChoice);
+        while (getchar() != '\n'); // Clear the input buffer
 
         switch (userChoice) {
         case 'i':
