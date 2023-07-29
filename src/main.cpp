@@ -64,6 +64,8 @@ struct StudNode* createStudent(char* fname, char* lname, char* phone, int level,
 struct Student* findStudentByFullName(char* fname, char* lname);
 void insertStudent();
 void editStudentByPhone();
+void updateFAILED(struct Student* student);
+void updateTOPS(struct Student* student, int courseNum, int newGrade);
 void deleteStudentByPhone();
 
 // Function declaration for user interaction
@@ -182,7 +184,7 @@ void insertStudent() {
 
         if (num == 15) {
             // Create the new student
-            newStudent = createStudent(fname, lname, phone, level-1, class_num-1, grades);
+            newStudent = createStudent(fname, lname, phone, level - 1, class_num - 1, grades);
 
             addStudToDB(newStudent);
             addTopStud(newStudent->data);
@@ -641,6 +643,8 @@ void editStudentByPhone() {
                             // Check if entered courseNum is valid
                             if (courseNum >= 0 && courseNum < NUM_COURSES) {
                                 currentStud->data->grades[courseNum] = newGrade;
+                                updateTOPS(currentStud->data, courseNum, newGrade);
+                                updateFAILED(currentStud->data);
                                 printf("Grade for course %d has been updated to %d.\n", courseNum, newGrade);
                             }
                             else {
@@ -743,7 +747,7 @@ void failed() {
         int num = sscanf(input, "%d", &level);
 
         // Validate input
-        if (num != 1 || level < 1 || level > NUM_LEVELS ) {
+        if (num != 1 || level < 1 || level > NUM_LEVELS) {
             printf("Invalid level. Please try again.\n");
         }
         else {
@@ -757,8 +761,8 @@ void failed() {
     if (failedList == NULL) {
         printf("No student failed \n");
     }
-
-    while (failedList != NULL) {
+    int i;
+    for (i = 0; i < NUM_TOP && failedList != NULL; i++) {
         struct Student* failStudent = failedList->data;
         printf("%s %s\n", failStudent->fname, failStudent->lname);
         failedList = failedList->next;
@@ -804,6 +808,97 @@ int decrypt(unsigned char* ciphertext, int ciphertext_len, unsigned char* key, u
 
     return plaintext_len;
 }
+
+/**
+ * Updates the position of a Student in the TOPS list after a grade has been changed.
+ *
+ * @param student   A pointer to the Student object whose grade has been updated.
+ * @param courseNum The index of the course whose grade has been changed.
+ * @param newGrade  The new grade for the specified course.
+ */
+void updateTOPS( struct Student* student, int courseNum, int newGrade) {
+    int lvl = student->level - 1; // Assuming level starts from 1
+
+    struct StudNode* prev = NULL;
+    struct StudNode* current = s.TOPS[lvl][courseNum];
+    struct StudNode* toMove = NULL; // Node to move to new position
+
+    // Find current position and remove from TOPS list
+    while (current != NULL) {
+        if (current->data == student) {
+            toMove = current;
+            if (prev == NULL) {
+                s.TOPS[lvl][courseNum] = current->next;
+            }
+            else {
+                prev->next = current->next;
+            }
+            break;
+        }
+        prev = current;
+        current = current->next;
+    }
+
+    if (toMove == NULL) {
+        printf("Student not found in TOPS.\n");
+        return;
+    }
+
+    // Find correct new position and insert
+    prev = NULL;
+    current = s.TOPS[lvl][courseNum];
+    while (current != NULL && current->data->grades[courseNum] > newGrade) {
+        prev = current;
+        current = current->next;
+    }
+
+    if (prev == NULL) {
+        s.TOPS[lvl][courseNum] = toMove;
+    }
+    else {
+        prev->next = toMove;
+    }
+
+    toMove->next = current;
+    printf("Student's position in TOPS updated.\n");
+}
+
+/**
+ * Updates the FAILED list by adding or removing the Student based on their grades.
+ * If a Student has at least one grade less than 56, they will be added to the FAILED list.
+ * If all their grades are 56 or greater, they will be removed from the FAILED list if present.
+ *
+ * @param school  A pointer to the School structure representing the database.
+ * @param student A pointer to the Student object to be checked.
+ */
+void updateFAILED(struct Student* student) {
+    int lvl = student->level - 1;
+    bool hasFailedGrade = false;
+
+    for (int i = 0; i < NUM_COURSES; i++) {
+        if (student->grades[i] < 56) {
+            hasFailedGrade = true;
+            break;
+        }
+    }
+
+    struct StudNode* current = s.FAILED[lvl];
+    while (current && current->data != student) {
+        current = current->next;
+    }
+
+    if (hasFailedGrade && !current) {
+        struct StudNode* newNode = (struct StudNode*)malloc(sizeof(struct StudNode));
+        newNode->data = student;
+        newNode->next = s.FAILED[lvl];
+        s.FAILED[lvl] = newNode;
+    }
+    else if (!hasFailedGrade && current) {
+        deleteStudNode(&s.FAILED[lvl], student);
+    }
+}
+
+
 
 /**
  * Deletes the specified Student node from a linked list.
@@ -852,7 +947,7 @@ void deleteStudent(struct School* school, struct Student* student) {
 
     // Delete from FAILED structure
     for (lvl = 0; lvl < NUM_LEVELS; lvl++) {
-            deleteStudNode(&school->FAILED[lvl], student);
+        deleteStudNode(&school->FAILED[lvl], student);
     }
 
     // Delete from DB structure
