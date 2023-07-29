@@ -1,5 +1,8 @@
 #include<stdio.h>
 #include <stdlib.h>
+#include <openssl/conf.h>
+#include <openssl/evp.h>
+#include <openssl/err.h>
 #include <string.h>
 
 #define NUM_LEVELS 12
@@ -37,9 +40,11 @@ struct Student* createStudent(char* fname, char* lname, char* phone, int level, 
 void menu();
 void insertStudent();
 void average();
+void handleErrors();
 void topOutstanding();
 void topFailed();
 void addTopStud(struct Student*);
+int decrypt(unsigned char* ciphertext, int ciphertext_len, unsigned char* key, unsigned char* iv, unsigned char* plaintext);
 
 int main()
 {
@@ -49,8 +54,9 @@ int main()
 
     return 0;
 }
+
 void INITDB() {
-    FILE* iptr = fopen("students_with_class.txt", "r");
+    FILE* iptr = fopen("students_encrypted.txt", "rb");  // changed to binary mode
     if (iptr == NULL) {
         printf("failed to open input file! \n");
         return;
@@ -62,23 +68,54 @@ void INITDB() {
     int level, class_num, grades[NUM_COURSES];
     struct Student* newStudent;
 
-    while (fscanf(iptr, "%s %s %s %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
-        fname, lname, phone, &level, &class_num,
-        &grades[0], &grades[1], &grades[2], &grades[3], &grades[4],
-        &grades[5], &grades[6], &grades[7], &grades[8], &grades[9]) == 15) {
+
+    unsigned char ciphertext[128];
+    char decryptedtext[128];
+
+
+    /* A 256 bit key */
+    unsigned char key[32] = { 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
+                           0x38, 0x39, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35,
+                           0x36, 0x37, 0x38, 0x39, 0x30, 0x31, 0x32, 0x33,
+                           0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x30, 0x31
+    };
+
+    /* A 128 bit IV */
+    unsigned char iv[16] = { 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
+                          0x38, 0x39, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35
+    };
+
+    while (!feof(iptr))
+    {
+        int len;
+        // read length of ciphertext
+        fread(&len, sizeof(int), 1, iptr);
+        // read the ciphertext
+        fread(ciphertext, sizeof(unsigned char), len, iptr);
+
+        // decrypt the ciphertext
+        int decryptedtext_len = decrypt(ciphertext, len, key, iv, (unsigned char*)decryptedtext);
+
+        // Null-terminating decrypted text
+        decryptedtext[decryptedtext_len] = '\0';
+
+        sscanf(decryptedtext, "%s %s %s %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
+            fname, lname, phone, &level, &class_num,
+            &grades[0], &grades[1], &grades[2], &grades[3], &grades[4],
+            &grades[5], &grades[6], &grades[7], &grades[8], &grades[9]);
+
         newStudent = createStudent(fname, lname, phone, level, class_num, grades);
 
         addTopStud(newStudent);
 
-
         // Link the new student to the existing list of students
-        newStudent->nextStud = s.DB[level-1][class_num-1];
-        s.DB[level-1][class_num-1] = newStudent;
-
+        newStudent->nextStud = s.DB[level - 1][class_num - 1];
+        s.DB[level - 1][class_num - 1] = newStudent;
     }
 
     fclose(iptr);
 }
+
 
 void PRINTDB() {
     int i, j, k;
@@ -102,18 +139,18 @@ void PRINTDB() {
 void addTopStud(struct Student* student)
 {
     int level = student->level;
-    int crs,plc;
+    int crs, plc;
 
     for (crs = 0; crs < NUM_COURSES; crs++)
         for (plc = 0; plc < NUM_TOP; plc++) {
 
-            if (s.course[level-1][crs].top[plc] == NULL){
-                s.course[level-1][crs].top[plc] = student;
+            if (s.course[level - 1][crs].top[plc] == NULL) {
+                s.course[level - 1][crs].top[plc] = student;
                 break;
             }
-            else if (student->grades[plc] > s.course[level-1][crs].top[plc]->grades[crs])
+            else if (student->grades[plc] > s.course[level - 1][crs].top[plc]->grades[crs])
             {
-                s.course[level-1][crs].top[crs] = student;
+                s.course[level - 1][crs].top[crs] = student;
                 break;
             }
         }
@@ -208,7 +245,7 @@ void insertStudent() {
             }
 
             // Create the new student
-            struct Student* newStudent = createStudent(fname, lname, phone, level-1, class_num-1, grades);
+            struct Student* newStudent = createStudent(fname, lname, phone, level - 1, class_num - 1, grades);
 
             addTopStud(newStudent);
 
@@ -298,7 +335,7 @@ void topOutstanding() {
         }
     } while (1);
 
-    struct Tops* t = &s.course[level-1][course-1];
+    struct Tops* t = &s.course[level - 1][course - 1];
 
     printf("Top students for Level %d, Course %d:\n", level, course);
     for (int i = 0; i < NUM_TOP; i++) {
@@ -307,7 +344,7 @@ void topOutstanding() {
             printf("No student in position %d\n", i + 1);
         }
         else {
-            printf(" %d) %s %s - %d \n", i + 1, topStudent->fname, topStudent->lname, topStudent->grades[course-1]);
+            printf(" %d) %s %s - %d \n", i + 1, topStudent->fname, topStudent->lname, topStudent->grades[course - 1]);
         }
     }
 }
@@ -315,4 +352,41 @@ void topOutstanding() {
 
 void topFailed() {
 
+}
+
+int decrypt(unsigned char* ciphertext, int ciphertext_len, unsigned char* key, unsigned char* iv, unsigned char* plaintext)
+{
+    EVP_CIPHER_CTX* ctx;
+
+    int len;
+
+    int plaintext_len;
+
+    /* Create and initialise the context */
+    if (!(ctx = EVP_CIPHER_CTX_new())) handleErrors();
+
+    /* Initialise the decryption operation. */
+    if (1 != EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv)) handleErrors();
+
+    /* Provide the message to be decrypted, and obtain the plaintext output. */
+    if (1 != EVP_DecryptUpdate(ctx, plaintext, &len, ciphertext, ciphertext_len)) handleErrors();
+    plaintext_len = len;
+
+    /* Finalise the decryption. Further plaintext bytes may be written at this stage. */
+    if (1 != EVP_DecryptFinal_ex(ctx, plaintext + len, &len)) handleErrors();
+    plaintext_len += len;
+
+    /* Clean up */
+    EVP_CIPHER_CTX_free(ctx);
+
+    return plaintext_len;
+}
+
+
+
+
+void handleErrors()
+{
+    ERR_print_errors_fp(stderr);
+    abort();
 }
