@@ -162,7 +162,7 @@ void insertStudent() {
     char phone[MAX_PHONE_LEN];
     int level, class_num, grades[NUM_COURSES];
     char userInput[100];
-
+    struct StudNode* newStudent;
     do {
         printf("Enter the student's details or type 'q' to exit.\n");
         printf("Format: Firstname Lastname Phone Level: 1-12 Class_number: 1-10 10-Grades\n");
@@ -175,25 +175,16 @@ void insertStudent() {
             return;
         }
 
-        int num = sscanf(userInput, "%s %s %s %d %d", fname, lname, phone, &level, &class_num);
+        int num = sscanf(userInput, "%s %s %s %d %d %d %d %d %d %d %d %d %d %d %d ",
+            fname, lname, phone, &level, &class_num,
+            &grades[0], &grades[1], &grades[2], &grades[3], &grades[4],
+            &grades[5], &grades[6], &grades[7], &grades[8], &grades[9]);
+
         int i;
-        if (num == 5) {
-            // Split grades from the rest of the string
-            char* gradesStr = userInput;
-            for (i = 0; i < 5; i++) {
-                gradesStr = strchr(gradesStr, ' ') + 1;
-            }
-
-            // Parse grades
-            int numGrades = 0;
-            char* grade = strtok(gradesStr, " ");
-            while (grade != NULL && numGrades < NUM_COURSES) {
-                grades[numGrades++] = atoi(grade);
-                grade = strtok(NULL, " ");
-            }
-
+        if (num == 14) {
             // Create the new student
-            struct StudNode* newStudent = createStudent(fname, lname, phone, level - 1, class_num - 1, grades);
+            newStudent = createStudent(fname, lname, phone, level, class_num, grades);
+
             addStudToDB(newStudent);
             addTopStud(newStudent->data);
             addFailedStud(newStudent->data);
@@ -821,27 +812,27 @@ int decrypt(unsigned char* ciphertext, int ciphertext_len, unsigned char* key, u
  * @param student The Student object to be deleted from the linked list.
  */
 void deleteStudNode(struct StudNode** head, struct Student* student) {
-    struct StudNode* currentStud = *head;
-    struct StudNode* prevStud = NULL;
+    struct StudNode* current = *head;
+    struct StudNode* prev = NULL;
 
-    while (currentStud != NULL) {
-        if (currentStud->data == student) {
-            // If student is at the head of the list
-            if (prevStud == NULL) {
-                *head = currentStud->next;
-            }
-            else {
-                prevStud->next = currentStud->next;
-            }
-
-            free(currentStud);
-            return;
-        }
-
-        prevStud = currentStud;
-        currentStud = currentStud->next;
+    while (current != NULL && current->data != student) {
+        prev = current;
+        current = current->next;
     }
+
+    if (current == NULL) return; // Student not found
+
+    if (prev == NULL) {
+        // Deleting the head node
+        *head = current->next;
+    }
+    else {
+        prev->next = current->next;
+    }
+
+    free(current); // Free the StudNode
 }
+
 
 /**
  * Deletes the specified Student from the School database and related data structures.
@@ -873,6 +864,7 @@ void deleteStudent(struct School* school, struct Student* student) {
 
 
     // Free the student
+    printf("Student with name %s deleted.\n", student->fname);
     free(student);
 
 }
