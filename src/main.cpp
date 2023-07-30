@@ -107,8 +107,8 @@ void INITDB() {
     struct StudNode* newStudent;
 
 
-    unsigned char ciphertext[128];
-    char decryptedtext[128];
+    unsigned char ciphertext[1024];
+    char decryptedtext[1024];
 
 
     /* A 256 bit key */
@@ -184,7 +184,7 @@ void insertStudent() {
 
         if (num == 15) {
             // Create the new student
-            newStudent = createStudent(fname, lname, phone, level - 1, class_num - 1, grades);
+            newStudent = createStudent(fname, lname, phone, level, class_num, grades);
 
             addStudToDB(newStudent);
             addTopStud(newStudent->data);
@@ -642,7 +642,7 @@ void editStudentByPhone() {
                             scanf("%d", &newGrade);
                             // Check if entered courseNum is valid
                             if (courseNum >= 0 && courseNum < NUM_COURSES) {
-                                currentStud->data->grades[courseNum] = newGrade;
+                                currentStud->data->grades[courseNum - 1] = newGrade;
                                 updateTOPS(currentStud->data, courseNum, newGrade);
                                 updateFAILED(currentStud->data);
                                 printf("Grade for course %d has been updated to %d.\n", courseNum, newGrade);
@@ -816,7 +816,7 @@ int decrypt(unsigned char* ciphertext, int ciphertext_len, unsigned char* key, u
  * @param courseNum The index of the course whose grade has been changed.
  * @param newGrade  The new grade for the specified course.
  */
-void updateTOPS( struct Student* student, int courseNum, int newGrade) {
+void updateTOPS(struct Student* student, int courseNum, int newGrade) {
     int lvl = student->level - 1; // Assuming level starts from 1
 
     struct StudNode* prev = NULL;
